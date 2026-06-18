@@ -1,12 +1,23 @@
+# Modified captcha solver using pytesseract (lightweight, Termux-compatible)
+# Install required packages in Termux:
+#   pkg install tesseract
+#   pip install pytesseract Pillow requests colorama prettytable
+
 import os
 try:
-    import requests, colorama, prettytable, ddddocr
-except:
+    import requests, colorama, prettytable
+    import pytesseract
+    from PIL import Image
+except ImportError:
     os.system("pip install requests")
     os.system("pip install colorama")
     os.system("pip install prettytable")
-    os.system("pip install ddddocr")
-    import requests, colorama, prettytable, ddddocr
+    os.system("pip install pytesseract")
+    os.system("pip install Pillow")
+    import requests, colorama, prettytable
+    import pytesseract
+    from PIL import Image
+
 import threading, ctypes, random, json, time, base64, sys, re
 from prettytable import PrettyTable
 from time import strftime
@@ -32,7 +43,6 @@ class Zefoy:
         self.text = 'Tool Zefoy'
         url1 = input("\033[1;33m VUI LÒNG NHẬP LINK VIDEO CẦN BUFF!:  ")
         self.url = url1
-        self.ocr = ddddocr.DdddOcr()
 
     def get_captcha(self):
         if os.path.exists('session'): 
@@ -77,10 +87,11 @@ class Zefoy:
             return (False, captcha_solve)
 
     def solve_captcha(self, path_to_file):
-        with open(path_to_file, 'rb') as f:
-            img_bytes = f.read()
-        result = self.ocr.classification(img_bytes)
-        return result.lower()
+        img = Image.open(path_to_file)
+        # Whitelist alphanumeric characters, single word mode
+        custom_config = r'--psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+        result = pytesseract.image_to_string(img, config=custom_config)
+        return result.strip().lower()
 
     def get_status_services(self):
         request = self.session.get(self.base_url, headers=self.headers).text
@@ -229,14 +240,8 @@ class Zefoy:
             time.sleep(4)
 
     def update_name(self):
-        while True:
-            try:
-                ctypes.windll.kernel32.SetConsoleTitleW(self.text.encode('utf-16le'))
-                video_info = self.get_video_info()
-                self.text = f"Views: {video_info['viewCount']} | Hearts: {video_info['likeCount']} | Comment: {video_info['commentCount']} | Favorites: {video_info['favoritesCount']} | Followers: {video_info['followersCount']}"
-            except:
-                pass
-            time.sleep(5)
+        # This function uses Windows-specific API, skip on Termux
+        pass
 
     def select_service(self):
         while True:
@@ -280,6 +285,6 @@ class Zefoy:
 if __name__ == "__main__":
     Z = Zefoy()
     threading.Thread(target=Z.check_config).start()
-    threading.Thread(target=Z.update_name).start()
+    # threading.Thread(target=Z.update_name).start()  # Disabled for non-Windows
     Z.send_captcha()
     Z.run()
